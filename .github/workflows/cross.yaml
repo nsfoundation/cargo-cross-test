@@ -1,0 +1,35 @@
+on: [push, workflow_dispatch]
+
+name: cross
+
+jobs:
+  cross:
+    runs-on: [nscloud-staging]
+    steps:
+      - name: clone code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+      - name: Install Linux dependencies
+        run: sudo apt-get install -y protobuf-compiler libssl-dev pkg-config musl-tools musl-dev
+      - name: install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: build
+        run: |
+          cargo install cross
+          rustup target add x86_64-unknown-linux-musl
+          cross build \
+            --release \
+            --features openssl/vendored \
+            --target=x86_64-unknown-linux-musl
+    
+      - name: Breakpoint if tests failed
+        if: failure()
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: gmichelo,edganiukov,htr,hugosantos,n-g,nichtverstehen
